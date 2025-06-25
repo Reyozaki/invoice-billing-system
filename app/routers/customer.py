@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from ..database import db_dependency
-from ..schemas import Customers
+from ..schemas import CustomerBase
 import models
 
 router= APIRouter(
@@ -14,7 +14,7 @@ async def root_customer():
     return {"message": "This is the root of customer."}
 
 @router.post("/add-customer")
-async def add_customer(customer: Customers, db: db_dependency):
+async def add_customer(customer: CustomerBase, db: db_dependency):
     new_customer= models.Customers(
         email= customer.email,
         phone= customer.phone,

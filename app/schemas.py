@@ -1,6 +1,7 @@
-from pydantic import BaseModel, EmailStr, constr    # type: ignore
+from pydantic import BaseModel, EmailStr, StringConstraints    # type: ignore
 from typing import Optional, Literal, List
 from decimal import Decimal
+from typing import Annotated
 
 class StoreBase(BaseModel):
     tax_id: int
@@ -10,15 +11,15 @@ class CustomerBase(BaseModel):
     customer_id: Optional[int]= None
     company_name: str
     email: EmailStr
-    phone: constr(regex= r"^\d{10}$") #type: ignore
+    phone: Annotated[str, StringConstraints(pattern= r"^\d{10}$")]
     address: str
 
-class Customer(BaseModel, CustomerBase, Products):
-    pass
-
-class Products(BaseModel, StoreBase):
-    product_id= Optional[int]= None
+class Products(StoreBase):
+    product_id: Optional[int]= None
     name: str
     unit_price: int
     tax_percent: Decimal
     description: str
+    
+class Customer(CustomerBase, Products):
+    pass
