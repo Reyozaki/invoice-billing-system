@@ -19,8 +19,7 @@ async def add_customer(customer: CustomerBase, db: db_dependency):
         email= customer.email,
         phone= customer.phone,
         address= customer.address,
-        company_name= customer.company_name,
-        tax_id= customer.tax_id
+        company_name= customer.company_name
     )
     print(new_customer)
     db.add(new_customer)

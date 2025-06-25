@@ -14,7 +14,7 @@ async def root_customer():
     return {"message": "This is the root of products."}
 
 @router.post("/add-product")
-async def add_customer(product: Products, db: db_dependency):
+async def add_product(product: Products, db: db_dependency):
     new_product= models.Products(
         product_id= product.product_id,
         name= product.name,
