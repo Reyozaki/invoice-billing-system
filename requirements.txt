@@ -1,0 +1,7 @@
+# Setup
+environment(billing)
+fastapi[standard]
+uvicorn[standard]
+SQLAlchemy
+alembic
+psycopg2
