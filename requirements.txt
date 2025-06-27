@@ -1,0 +1,6 @@
+# Setup after virtual environment creation
+fastapi[standard]
+uvicorn[standard]
+SQLAlchemy
+alembic
+psycopg2
