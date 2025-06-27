@@ -21,5 +21,12 @@ class Products(StoreBase):
     tax_percent: Decimal
     description: str
     
-class Customer(CustomerBase, Products):
+class Sales(CustomerBase, Products):
     pass
+
+class UpdateCustomer(CustomerBase):
+    company_name: Optional[str]= None
+    email: Optional[EmailStr]
+    phone: Optional[Annotated[str, StringConstraints(pattern= r"^\d{10}$")]]= None
+    address: Optional[str]
+    tax_id: Optional[int]
