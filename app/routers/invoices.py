@@ -13,7 +13,6 @@ router=APIRouter(
 async def root_invoices():
     return {"message": "This is the root of invoices."}
 
-
 @router.post("/", status_code=201)
 async def add_invoice(invoice: InvoiceBase, db: db_dependency):
     new_invoice = models.Invoices(

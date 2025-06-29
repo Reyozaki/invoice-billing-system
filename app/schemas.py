@@ -32,7 +32,6 @@ class UpdateCustomer(CustomerBase):
     address: Optional[str]
     tax_id: Optional[int]
 
-
 class InvoiceBase(BaseModel):
     invoice_id: Optional[int] = None
     customer_id: int
@@ -42,4 +41,13 @@ class InvoiceBase(BaseModel):
 
     class Config:
         orm_mode = True
+        
+class UpdateInvoices(BaseModel):
+    customer_id: Optional[int] = None
+    total_amount: Optional[Decimal] = None
+    status: Optional[str] = None
+
+    class Config:
+        orm_mode = True
+        
     
