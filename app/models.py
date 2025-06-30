@@ -32,11 +32,13 @@ class Products(Base):
 class Sale(Base):
     __tablename__= "sales"
     
-    customer_id= Column(BigInteger, primary_key= True)
+    sale_id= Column(BigInteger, primary_key= True)
+    customer_id= Column(Integer, ForeignKey("customers.customer_id"), index= True, nullable= False)
     product_id= Column(Integer, ForeignKey("products.product_id"), index= True, nullable= False)
     
 class Invoices(Base):
     __tablename__ = "invoices"
+    
     invoice_id = Column(BigInteger, primary_key=True, index=True)
     customer_id = Column(Integer, ForeignKey("sales.customer_id"), nullable=False)
     date = Column(DateTime(timezone=True), server_default=func.now())
