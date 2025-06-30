@@ -1,5 +1,5 @@
-# invoice-billing-system
-Mini project for Backend Internship at Tech Manthan on Invoice/Billing System.
+# Invoice/Billing System
+Mini project during Backend Internship at Tech Manthan.
 
 # Objectives
 Build a system that allows users (typically admins or businesses) to:
