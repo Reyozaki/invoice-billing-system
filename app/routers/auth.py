@@ -1,13 +1,12 @@
 from fastapi import APIRouter, HTTPException, Depends, status
 from datetime import datetime, timedelta
-from sqlalchemy.orm import Session  #type:ignore
 from jose import jwt, JWTError   #type:ignore
 from passlib.context import CryptContext    #type:ignore
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer    #type:ignore
 from typing import Annotated
 from pydantic import BaseModel  #type: ignore
 
-from ..database import SessionLocal, db_dependency
+from ..database import db_dependency
 from ..schemas import UpdateCustomer, CustomerBase
 from app.config import ALGORITHM, SECRET_KEY, ADMIN_KEY
 import models

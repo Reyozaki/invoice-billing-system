@@ -2,6 +2,7 @@ from pydantic import BaseModel, EmailStr, StringConstraints    # type: ignore
 from typing import Optional, Literal, List
 from decimal import Decimal
 from typing import Annotated
+from datetime import datetime
 
 class Admin(BaseModel):
     username: str
@@ -42,3 +43,17 @@ class UpdateProduct(BaseModel):
     unit_price: Optional[Decimal]= None
     tax_percent: Optional[Decimal]= None
     description: Optional[str]= None
+
+class InvoiceBase(BaseModel):
+    invoice_id: Optional[int]= None
+    customer_id: int
+    total_amount: Decimal
+    status: Optional[str]= "unpaid"
+    date: Optional[datetime]= None
+     
+        
+class UpdateInvoice(BaseModel):
+    customer_id: Optional[int]= None
+    total_amount: Optional[Decimal]= None
+    status: Optional[str]= None
+

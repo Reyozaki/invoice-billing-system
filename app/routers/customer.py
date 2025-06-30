@@ -18,6 +18,11 @@ async def view_profile(customer: customer_dependency, db: db_dependency,
 
 @router.post("/")
 async def add_customer(customer: CustomerBase, db: db_dependency):
+    existing_customer= db.query(models.Customers).filter(models.Customers.company_name == customer.company_name).first()
+    if existing_customer:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
+                            detail= "Customer of that name already exist.")
+        
     new_customer= models.Customers(
         email= customer.email,
         phone= customer.phone,

@@ -6,7 +6,7 @@ from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer    
 from typing import Annotated
 from pydantic import BaseModel  #type: ignore
 
-from ..database import SessionLocal, db_dependency
+from ..database import db_dependency
 from ..schemas import UpdateCustomer, Admin, Products, UpdateProduct
 import models
 from ..routers.auth import bcrypt_context, admin_dependency
@@ -20,6 +20,10 @@ router= APIRouter(
 
 @router.post("/")
 async def add_admin(admin: Admin, db: db_dependency):
+    existing_admin= db.query(models.Admin).filter(models.Admin.username == admin.username).first()
+    if existing_admin:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
+                            detail= "Admin of that username already exist.")
     new_admin= models.Admin(
         username= admin.username,
         password= bcrypt_context.hash(admin.password)
@@ -83,6 +87,10 @@ async def delete_customer(admin: admin_dependency, db: db_dependency,
 
 @router.post("/add-product")
 async def add_product(product: Products, db: db_dependency):
+    existing_product= db.query(models.Products).filter(models.Products.name == product.name).first()
+    if existing_product:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
+                            detail= "Product of that name already exist.")
     new_product= models.Products(
         product_id= product.product_id,
         name= product.name,
