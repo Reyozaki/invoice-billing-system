@@ -45,3 +45,7 @@ class Invoices(Base):
     total_amount = Column(Numeric(10, 2), nullable=False)
     status = Column(String(20), default="unpaid")
     
+    quantity = Column(Integer, nullable=True)
+    tax = Column(Numeric(5, 2), nullable=True) 
+    discount = Column(Numeric(5, 2), nullable=True)  
+    

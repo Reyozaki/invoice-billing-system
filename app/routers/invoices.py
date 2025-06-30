@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from ..database import db_dependency
-from ..schemas import InvoiceBase
+from ..schemas import InvoiceBase,UpdateInvoice
 import models 
 
 router=APIRouter(    
@@ -32,14 +32,22 @@ async def get_invoice(invoice_id: int, db: db_dependency):
         raise HTTPException(status_code=404, detail="Invoice not found.")
     return invoice
 
-@router.put("/{invoice_id}")
-async def update_invoice(invoice_id: int, updated_invoice: InvoiceBase, db: db_dependency):
-    invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
-    if invoice is None:
+@router.put("/invoice/{invoice_id}")
+async def update_invoice(invoice_id: int, invoice: UpdateInvoice, db: db_dependency):
+    existing_invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
+    if not existing_invoice:
         raise HTTPException(status_code=404, detail="Invoice not found.")
-    invoice.customer_id = updated_invoice.customer_id
-    invoice.total_amount = updated_invoice.total_amount
-    invoice.status = updated_invoice.status
+
+    if not any([invoice.quantity, invoice.tax, invoice.discount]):
+        raise HTTPException(status_code=400, detail="Please update at least one value: quantity, tax, or discount.")
+
+    if invoice.quantity is not None:
+        existing_invoice.quantity = invoice.quantity
+    if invoice.tax is not None:
+        existing_invoice.tax = invoice.tax
+    if invoice.discount is not None:
+        existing_invoice.discount = invoice.discount
+
     db.commit()
     return {"message": "Invoice updated successfully."}
 
