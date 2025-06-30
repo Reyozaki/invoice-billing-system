@@ -10,19 +10,6 @@ router= APIRouter(
     )
 
 @router.get("/")
-async def root_customer():
-    return {"message": "This is the root of products."}
+async def view_products(db: db_dependency):
+    return db.query(models.Products).all()
 
-@router.post("/add-product")
-async def add_product(product: Products, db: db_dependency):
-    new_product= models.Products(
-        product_id= product.product_id,
-        name= product.name,
-        unit_price= product.unit_price,
-        tax_percent= product.tax_percent,
-        description= product.description
-    )
-    print(new_product)
-    db.add(new_product)
-    db.commit()
-    return {"message": "New product added to {product.store_name}."}

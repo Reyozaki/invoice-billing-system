@@ -4,3 +4,5 @@ uvicorn[standard]
 SQLAlchemy
 alembic
 psycopg2
+python-jose[cryptography]
+passlib[bcrypt]
