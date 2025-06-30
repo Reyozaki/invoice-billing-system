@@ -8,9 +8,6 @@ class Admin(BaseModel):
     username: str
     password: str
     
-class StoreBase(BaseModel):    
-    store_name: str
-    
 class CustomerBase(BaseModel):
     company_name: str
     email: EmailStr
@@ -18,8 +15,9 @@ class CustomerBase(BaseModel):
     address: str
     tax_id: int
     password: str
+    store_name: str
     
-class Products(StoreBase):
+class Products(BaseModel):
     product_id: Optional[int]= None
     name: str
     unit_price: Decimal
@@ -51,7 +49,6 @@ class InvoiceBase(BaseModel):
     status: Optional[str]= "unpaid"
     date: Optional[datetime]= None
      
-        
 class UpdateInvoice(BaseModel):
     customer_id: Optional[int]= None
     total_amount: Optional[Decimal]= None

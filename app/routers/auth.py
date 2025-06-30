@@ -1,4 +1,4 @@
-from fastapi import APIRouter, HTTPException, Depends, status
+from fastapi import APIRouter, HTTPException, Depends, status, Security
 from datetime import datetime, timedelta
 from jose import jwt, JWTError   #type:ignore
 from passlib.context import CryptContext    #type:ignore
@@ -18,8 +18,8 @@ router= APIRouter(
 )
 
 bcrypt_context= CryptContext(schemes= ['bcrypt'], deprecated= 'auto')
-customer_oauth2_bearer= OAuth2PasswordBearer(tokenUrl= 'auth/token')
-admin_oauth2_bearer= OAuth2PasswordBearer(tokenUrl= 'auth/atoken')
+customer_oauth2_bearer= OAuth2PasswordBearer(tokenUrl= 'auth/token', scheme_name= "CustomerToken")
+admin_oauth2_bearer= OAuth2PasswordBearer(tokenUrl= 'auth/atoken', scheme_name= "AdminToken")
 
 class Token(BaseModel):
     access_token: str
@@ -77,7 +77,7 @@ def authenticate_admin(username: str, password: str, db):
     return admin
 
 
-async def get_current_customer(token: Annotated[str, Depends(customer_oauth2_bearer)]):
+async def get_current_customer(token: Annotated[str, Security(customer_oauth2_bearer)]):
     try:
         payload= jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         company_name: str= payload.get('sub')
@@ -90,7 +90,7 @@ async def get_current_customer(token: Annotated[str, Depends(customer_oauth2_bea
         raise HTTPException(status_code= status.HTTP_401_UNAUTHORIZED, 
                             detail= "Customer could not be validated.")
 
-async def get_current_admin(token: Annotated[str, Depends(admin_oauth2_bearer)]):
+async def get_current_admin(token: Annotated[str, Security(admin_oauth2_bearer)]):
     try:
         payload= jwt.decode(token, ADMIN_KEY, algorithms=[ALGORITHM])
         username: str= payload.get('sub')
@@ -104,5 +104,5 @@ async def get_current_admin(token: Annotated[str, Depends(admin_oauth2_bearer)])
                             detail= "User could not be validated.")
 
 
-customer_dependency= Annotated[dict, Depends(get_current_customer)]
-admin_dependency= Annotated[dict, Depends(get_current_admin)]
+customer_dependency= Annotated[dict, Security(get_current_customer)]
+admin_dependency= Annotated[dict, Security(get_current_admin)]
