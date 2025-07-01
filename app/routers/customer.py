@@ -75,7 +75,8 @@ async def update_profile(update_customer: UpdateCustomer, db: db_dependency, cus
         update_count += 1   
         
     if update_count== 0:
-        raise HTTPException(status_code= 400,detail= "Please update at least one detail.")
+        raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST,
+                            detail= "Please update at least one detail.")
     db.commit()
     db.refresh(existing_customer)
     if update_count== 1:
