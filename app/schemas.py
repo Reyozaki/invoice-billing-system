@@ -58,15 +58,3 @@ class UpdateInvoice(BaseModel):
         orm_mode = True
     
 
-
-    
-class InvoiceBase(BaseModel):
-    invoice_id: Optional[int] = None
-    customer_id: int
-    total_amount: Decimal
-    status: Optional[str] = "unpaid"
-    date: Optional[datetime] = None
-
-    class Config:
-        orm_mode = True
-    

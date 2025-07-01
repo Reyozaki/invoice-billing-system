@@ -43,12 +43,8 @@ class Invoices(Base):
     customer_id = Column(Integer, ForeignKey("sales.customer_id"), nullable=False)
     date = Column(DateTime(timezone=True), server_default=func.now())
     total_amount = Column(Numeric(10, 2), nullable=False)
-    status = Column(String(20), default="unpaid")
-    
+    status = Column(String(20), default="unpaid") 
     quantity = Column(Integer, nullable=True)
     tax = Column(Numeric(5, 2), nullable=True) 
     discount = Column(Numeric(5, 2), nullable=True)  
-    
-    
-
     
