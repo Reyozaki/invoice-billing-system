@@ -1,7 +1,6 @@
 from pydantic import BaseModel, EmailStr, StringConstraints    # type: ignore
-from typing import Optional, Literal, List
+from typing import Optional, Literal, List, Annotated
 from decimal import Decimal
-from typing import Annotated
 from datetime import datetime
 
 class Admin(BaseModel):
@@ -46,7 +45,7 @@ class InvoiceBase(BaseModel):
     invoice_id: Optional[int]= None
     customer_id: int
     total_amount: Decimal
-    status: Optional[str]= "unpaid"
+    status: Literal["Draft", "Sent", "Paid"]
     date: Optional[datetime]= None
      
 class UpdateInvoice(BaseModel):

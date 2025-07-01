@@ -1,5 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from datetime import datetime, timedelta
+from sqlalchemy.orm import load_only
 from jose import jwt, JWTError   #type:ignore
 from passlib.context import CryptContext    #type:ignore
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer    #type:ignore
@@ -17,7 +18,10 @@ router= APIRouter(
     responses= {404: {"description": "Not found"}}
 )
 
-
+@router.get("/")
+async def admin_dashboard(db: db_dependency, admin: admin_dependency):
+    return db.query(models.Admin).options(load_only(models.Admin.username)).all()
+    
 @router.post("/")
 async def add_admin(admin: Admin, db: db_dependency):
     existing_admin= db.query(models.Admin).filter(models.Admin.username == admin.username).first()
@@ -86,7 +90,7 @@ async def delete_customer(admin: admin_dependency, db: db_dependency,
     
 
 @router.post("/add-product")
-async def add_product(product: Products, db: db_dependency):
+async def add_product(admin: admin_dependency, product: Products, db: db_dependency):
     existing_product= db.query(models.Products).filter(models.Products.name == product.name).first()
     if existing_product:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
@@ -101,7 +105,7 @@ async def add_product(product: Products, db: db_dependency):
     print(new_product)
     db.add(new_product)
     db.commit()
-    return {"message": f"New product added to {product.name}."}
+    return {"message": f"New product added: {product.name}."}
 
 @router.put("/edit-product")
 async def update_product(admin: admin_dependency, current_product: UpdateProduct, db: db_dependency, 

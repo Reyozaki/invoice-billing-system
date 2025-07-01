@@ -25,8 +25,8 @@ class Products(Base):
     
     product_id= Column(BigInteger, primary_key= True)
     name= Column(String, unique= True, nullable= False)
-    unit_price= Column(Numeric(6, 2), nullable= False)
-    tax_percent= Column(Numeric(3, 2), nullable= False)
+    unit_price= Column(Numeric(8, 2), nullable= False)
+    tax_percent= Column(Numeric(5, 2), nullable= False)
     description= Column(String(50), nullable= False)
     
 class Sale(Base):
@@ -43,5 +43,5 @@ class Invoices(Base):
     customer_id = Column(Integer, ForeignKey("sales.customer_id"), nullable=False)
     date = Column(DateTime(timezone=True), server_default=func.now())
     total_amount = Column(Numeric(10, 2), nullable=False)
-    status = Column(String(20), default="unpaid")
+    status = Column(String(20), default="Draft")
     

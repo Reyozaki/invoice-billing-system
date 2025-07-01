@@ -1,8 +1,11 @@
 from fastapi import APIRouter, HTTPException, Query, status
+from sqlalchemy.orm import load_only
+from pydantic import BaseModel, EmailStr
+from typing import Dict
+
 from ..database import db_dependency
 from ..schemas import CustomerBase, UpdateCustomer
-import models
-
+from models import Customers
 from .auth import bcrypt_context, customer_dependency
 
 router= APIRouter(
@@ -11,19 +14,26 @@ router= APIRouter(
     responses= {404: {"description": "Not found"}}
     )
 
+
 @router.get("/")
 async def view_profile(customer: customer_dependency, db: db_dependency, 
                        current_customer: int= Query(...)):
-    return db.query(models.Customers).filter(models.Customers.customer_id == current_customer).first()
+    return db.query(Customers).options(load_only(
+        Customers.company_name,
+        Customers.address,
+        Customers.tax_id,
+        Customers.phone,
+        Customers.email,
+        )).filter(Customers.customer_id == current_customer).first()
 
 @router.post("/")
 async def add_customer(customer: CustomerBase, db: db_dependency):
-    existing_customer= db.query(models.Customers).filter(models.Customers.company_name == customer.company_name).first()
+    existing_customer= db.query(Customers).filter(Customers.company_name == customer.company_name).first()
     if existing_customer:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
                             detail= "Customer of that name already exist.")
         
-    new_customer= models.Customers(
+    new_customer= Customers(
         email= customer.email,
         phone= customer.phone,
         address= customer.address,
@@ -39,7 +49,7 @@ async def add_customer(customer: CustomerBase, db: db_dependency):
 @router.put("/edit-profile")
 async def update_profile(update_customer: UpdateCustomer, db: db_dependency, customer: customer_dependency,
                          current_customer: int= Query(...)):
-    existing_customer= db.query(models.Customers).filter(models.Customers.customer_id == current_customer).first()
+    existing_customer= db.query(Customers).filter(Customers.customer_id == current_customer).first()
     if not existing_customer:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
                             detail= "Customer of that ID does not exist.")
