@@ -49,7 +49,11 @@ class InvoiceBase(BaseModel):
     date: Optional[datetime]= None
      
 class UpdateInvoice(BaseModel):
-    customer_id: Optional[int]= None
-    total_amount: Optional[Decimal]= None
-    status: Optional[str]= None
+    quantity: Optional[int] = None
+    tax: Optional[Decimal] = None
+    discount: Optional[Decimal] = None
+
+    class Config:
+        orm_mode = True
+    
 

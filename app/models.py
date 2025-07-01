@@ -44,4 +44,7 @@ class Invoices(Base):
     date = Column(DateTime(timezone=True), server_default=func.now())
     total_amount = Column(Numeric(10, 2), nullable=False)
     status = Column(String(20), default="Draft")
+    quantity = Column(Integer, nullable=True)
+    tax = Column(Numeric(5, 2), nullable=True) 
+    discount = Column(Numeric(5, 2), nullable=True)
     
