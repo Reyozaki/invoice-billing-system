@@ -2,7 +2,9 @@ from fastapi import APIRouter, HTTPException, status
 from ..database import db_dependency
 from ..schemas import InvoiceBase, UpdateInvoice
 from ..schemas import InvoiceBase, UpdateInvoice
-import models 
+from models import Customers, Invoices, Sale
+from .auth import customer_perm, admin_perm, either_perm
+
 
 router=APIRouter(    
     prefix= '/invoices',
@@ -11,32 +13,45 @@ router=APIRouter(
     )
 
 @router.get("/")
-async def root_invoices(db: db_dependency):
-    return db.query(models.Invoices).all()
+async def view_invoices(db: db_dependency, user: either_perm):
+    perm = user["scopes"]
 
-@router.post("/", status_code=201)
-async def add_invoice(invoice: InvoiceBase, db: db_dependency):
-    new_invoice= models.Invoices(
-        customer_id= invoice.customer_id,
-        total_amount= invoice.total_amount,
-        status= invoice.status
+    if "admin" in perm:
+        invoices = db.query(Invoices).all()
+        return invoices
+
+    elif "customer" in perm:
+        customer= db.query(Customers).filter(Customers.user_id == user["id"]).first()
+        sales= db.query(Sale).filter(Sale.customer_id == customer.customer_id).all()
+        sale_ids= [sale.sale_id for sale in sales]
+        if not sale_ids:
+            raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
+                                detail= f"No Purchases found for customer {customer.company_name}.")
+
+        customer_invoices = db.query(Invoices).filter(Invoices.sale_id.in_(sale_ids)).all()
+
+        if not customer_invoices:
+            raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
+                                detail= f"Invoices for customer {customer.company_name} not found")
+
+        return customer_invoices
+    
+
+@router.post("/", status_code= status.HTTP_201_CREATED)
+async def add_invoice(invoice: InvoiceBase, db: db_dependency, admin: admin_perm):
+    new_invoice = Invoices(
+        customer_id=invoice.customer_id,
+        total_amount=invoice.total_amount,
+        status=invoice.status
     )
     db.add(new_invoice)
     db.commit()
     db.refresh(new_invoice)
     return {"message": "New invoice successfully created.", "invoice": new_invoice}
 
-@router.get("/{invoice_id}", response_model= InvoiceBase)
-async def get_invoice(invoice_id: int, db: db_dependency):
-    invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
-    if invoice is None:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail="Invoice not found.")
-    return invoice
-
 @router.put("/invoice/{invoice_id}")
 async def update_invoice(invoice_id: int, invoice: UpdateInvoice, db: db_dependency):
-    existing_invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
+    existing_invoice = db.query(Invoices).filter(Invoices.invoice_id == invoice_id).first()
     if not existing_invoice:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
                             detail="Invoice not found.")
@@ -57,55 +72,7 @@ async def update_invoice(invoice_id: int, invoice: UpdateInvoice, db: db_depende
 
 @router.delete("/{invoice_id}")
 async def delete_invoice(invoice_id: int, db: db_dependency):
-    invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
-    if invoice is None:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail="Invoice not found.")
-    db.delete(invoice)
-    db.commit()
-    return {"message": "Invoice deleted successfully."}
-
-
-@router.post("/", status_code= status.HTTP_201_CREATED)
-async def add_invoice(invoice: InvoiceBase, db: db_dependency):
-    new_invoice = models.Invoices(
-        customer_id=invoice.customer_id,
-        total_amount=invoice.total_amount,
-        status=invoice.status
-    )
-    db.add(new_invoice)
-    db.commit()
-    db.refresh(new_invoice)
-    return {"message": "New invoice successfully created.", "invoice": new_invoice}
-
-@router.get("/all", response_model=list[InvoiceBase])
-async def get_all_invoices(db: db_dependency):
-    invoices = db.query(models.Invoices).all()
-    return invoices
-
-@router.get("/{invoice_id}", response_model=InvoiceBase)
-async def get_invoice(invoice_id: int, db: db_dependency):
-    invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
-    if invoice is None:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail="Invoice not found.")
-    return invoice
-
-@router.put("/{invoice_id}")
-async def update_invoice(invoice_id: int, updated_invoice: InvoiceBase, db: db_dependency):
-    invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
-    if invoice is None:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail="Invoice not found.")
-    invoice.customer_id = updated_invoice.customer_id
-    invoice.total_amount = updated_invoice.total_amount
-    invoice.status = updated_invoice.status
-    db.commit()
-    return {"message": "Invoice updated successfully."}
-
-@router.delete("/{invoice_id}")
-async def delete_invoice(invoice_id: int, db: db_dependency):
-    invoice = db.query(models.Invoices).filter(models.Invoices.invoice_id == invoice_id).first()
+    invoice = db.query(Invoices).filter(Invoices.invoice_id == invoice_id).first()
     if invoice is None:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
                             detail="Invoice not found.")

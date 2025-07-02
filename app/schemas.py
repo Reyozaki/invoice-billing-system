@@ -14,7 +14,6 @@ class CustomerBase(BaseModel):
     address: str
     tax_id: int
     password: str
-    store_name: str
     
 class Products(BaseModel):
     product_id: Optional[int]= None
@@ -54,6 +53,25 @@ class UpdateInvoice(BaseModel):
     discount: Optional[Decimal] = None
 
     class Config:
-        orm_mode = True
+        from_attributes = True
     
+class CustomerProfile(BaseModel):
+    company_name: str
+    tax_id: int
+    email: EmailStr
+    address: str
+    phone: Annotated[str, StringConstraints(pattern= r"^\d{10}$")]
+    
+    class Config:
+        from_attributes= True
 
+class CustomerIn(BaseModel):
+    company_name:str
+    email: EmailStr
+    tax_id: int
+    phone: Annotated[str, StringConstraints(pattern= r"^\d{10}$")]
+    address: str    
+    password: str
+    
+    class Config:
+        from_attributes= True

@@ -1,16 +1,13 @@
 from fastapi import APIRouter, HTTPException, Query, status
 from datetime import datetime, timedelta
 from sqlalchemy.orm import load_only
-from jose import jwt, JWTError   #type:ignore
-from passlib.context import CryptContext    #type:ignore
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer    #type:ignore
 from typing import Annotated
 from pydantic import BaseModel  #type: ignore
 
 from ..database import db_dependency
 from ..schemas import UpdateCustomer, Admin, Products, UpdateProduct
 import models
-from ..routers.auth import bcrypt_context, admin_dependency
+from ..routers.auth import bcrypt_context, admin_perm
 
 router= APIRouter(
     prefix= '/admin',    
@@ -19,18 +16,29 @@ router= APIRouter(
 )
 
 @router.get("/")
-async def admin_dashboard(db: db_dependency, admin: admin_dependency):
+async def admin_dashboard(db: db_dependency, admin: admin_perm):
     return db.query(models.Admin).options(load_only(models.Admin.username)).all()
     
 @router.post("/")
 async def add_admin(admin: Admin, db: db_dependency):
     existing_admin= db.query(models.Admin).filter(models.Admin.username == admin.username).first()
     if existing_admin:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
+        raise HTTPException(status_code= status.HTTP_409_CONFLICT, 
                             detail= "Admin of that username already exist.")
-    new_admin= models.Admin(
+    hashed_password= bcrypt_context.hash(admin.password)
+    
+    new_user= models.Users(
         username= admin.username,
-        password= bcrypt_context.hash(admin.password)
+        password= hashed_password,
+        role= "admin"
+    )
+    db.add(new_user)
+    db.flush()
+    
+    new_admin= models.Admin(
+        user_id= new_user.user_id,
+        username= admin.username,
+        password= hashed_password
     )
     print(new_admin)
     db.add(new_admin)
@@ -38,46 +46,8 @@ async def add_admin(admin: Admin, db: db_dependency):
     return {"message": "New Admin successfully created."}
 
 
-@router.put("/edit-customer")
-async def update_customer(admin: admin_dependency, current_customer: UpdateCustomer, db: db_dependency, 
-                          customerid: int= Query(...)):
-    existing_customer= db.query(models.Customers).filter(models.Customers.customer_id == customerid).first()
-    if not existing_customer:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail= "Customer of that ID does not exist.")
-    
-    update_count= 0
-    if current_customer.email is not None:
-        existing_customer.email= current_customer.email
-        update_count += 1
-    if current_customer.phone is not None:
-        existing_customer.phone= current_customer.phone
-        update_count += 1
-    if current_customer.address is not None:
-        existing_customer.address= current_customer.address
-        update_count += 1
-    if current_customer.company_name is not None:
-        existing_customer.company_name= current_customer.company_name
-        update_count += 1 
-    if current_customer.tax_id is not None:
-        existing_customer.tax_id= current_customer.tax_id
-        update_count += 1
-    if current_customer.password is not None:
-        existing_customer.password= bcrypt_context.hash(current_customer.password)
-        update_count += 1             
-        
-    if update_count== 0:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
-                            detail= "Please update at least one detail.")
-    db.commit()
-    db.refresh(existing_customer)
-    if update_count== 1:
-        return {"message": f"Successfully updated {update_count} detail.", "Customer": [existing_customer.customer_id, existing_customer.company_name]}
-    return {"message": f"Successfully updated {update_count} details.", "Customer": [existing_customer.customer_id, existing_customer.company_name]}
-
-
 @router.delete("/delete-customer")
-async def delete_customer(admin: admin_dependency, db: db_dependency, 
+async def delete_customer(admin: admin_perm, db: db_dependency, 
                           customer_id: int= Query(...)):
     existing_customer= db.query(models.Customers).filter(models.Customers.customer_id == customer_id).first()
     if not existing_customer:
@@ -90,13 +60,12 @@ async def delete_customer(admin: admin_dependency, db: db_dependency,
     
 
 @router.post("/add-product")
-async def add_product(admin: admin_dependency, product: Products, db: db_dependency):
+async def add_product(admin: admin_perm, product: Products, db: db_dependency):
     existing_product= db.query(models.Products).filter(models.Products.name == product.name).first()
     if existing_product:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
+        raise HTTPException(status_code= status.HTTP_409_CONFLICT, 
                             detail= "Product of that name already exist.")
     new_product= models.Products(
-        product_id= product.product_id,
         name= product.name,
         unit_price= product.unit_price,
         tax_percent= product.tax_percent,
@@ -107,39 +76,8 @@ async def add_product(admin: admin_dependency, product: Products, db: db_depende
     db.commit()
     return {"message": f"New product added: {product.name}."}
 
-@router.put("/edit-product")
-async def update_product(admin: admin_dependency, current_product: UpdateProduct, db: db_dependency, 
-                          productid: int= Query(...)):
-    existing_product= db.query(models.Products).filter(models.Products.product_id == productid).first()
-    if not existing_product:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail= "Product of that ID does not exist.")
-    
-    update_count= 0
-    if current_product.name is not None:
-        existing_product.name= current_product.name
-        update_count += 1
-    if current_product.unit_price is not None:
-        existing_product.unit_price= current_product.unit_price
-        update_count += 1
-    if current_product.tax_percent is not None:
-        existing_product.tax_percent= current_product.tax_percent
-        update_count += 1
-    if current_product.description is not None:
-        existing_product.description= current_product.description
-        update_count += 1 
-    
-    if update_count== 0:
-        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
-                            detail= "Please update at least one detail.")
-    db.commit()
-    db.refresh(existing_product)
-    if update_count== 1:
-        return {"message": f"Successfully updated {update_count} detail.", "Product": [existing_product.product_id, existing_product.name]}
-    return {"message": f"Successfully updated {update_count} details.", "Product": [existing_product.product_id, existing_product.name]}
-
 @router.delete("/delete-product")
-async def delete_product(admin: admin_dependency, db: db_dependency, 
+async def delete_product(admin: admin_perm, db: db_dependency, 
                           product_id: int= Query(...)):
     existing_product= db.query(models.Products).filter(models.Products.product_id == product_id).first()
     if not existing_product:
