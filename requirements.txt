@@ -6,3 +6,5 @@ alembic
 psycopg2
 python-jose[cryptography]
 passlib[bcrypt]
+python-docx
+pdfkit

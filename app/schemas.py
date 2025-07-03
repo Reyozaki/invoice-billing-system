@@ -16,14 +16,16 @@ class CustomerBase(BaseModel):
     password: str
     
 class Products(BaseModel):
-    product_id: Optional[int]= None
     name: str
     unit_price: Decimal
     tax_percent: Decimal
     description: str
     
-class Sales(CustomerBase, Products):
-    pass
+class Orders(BaseModel):
+    customer_id: int
+    product_id: int
+    quantity: int
+    status: Literal["unpaid", "paid"]
 
 class UpdateCustomer(BaseModel):
     company_name: Optional[str]= None
@@ -34,7 +36,6 @@ class UpdateCustomer(BaseModel):
     password: Optional[str]= None
     
 class UpdateProduct(BaseModel):
-    product_id: Optional[int]= None
     name: Optional[str]= None
     unit_price: Optional[Decimal]= None
     tax_percent: Optional[Decimal]= None
@@ -46,6 +47,10 @@ class InvoiceBase(BaseModel):
     total_amount: Decimal
     status: Literal["Draft", "Sent", "Paid"]
     date: Optional[datetime]= None
+    class Config:
+        json_encoders = {
+            datetime: lambda v: v.strftime("%Y-%m-%d %H:%M")
+        }
      
 class UpdateInvoice(BaseModel):
     quantity: Optional[int] = None
@@ -75,3 +80,15 @@ class CustomerIn(BaseModel):
     
     class Config:
         from_attributes= True
+        
+class InvoiceIn(BaseModel):
+    customer_id: int
+    product_ids: List[int]
+    status: Literal["Draft", "Sent", "Paid"]
+    tax: Decimal
+    discount: Decimal
+    class Config:
+        from_attributes= True
+        json_encoders = {
+            datetime: lambda v: v.strftime("%Y-%m-%d %H:%M")
+        }

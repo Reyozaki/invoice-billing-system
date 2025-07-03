@@ -2,13 +2,13 @@ from fastapi import APIRouter, HTTPException, Depends, status, Security
 from datetime import datetime, timedelta
 from jose import jwt, JWTError
 from passlib.context import CryptContext
-from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer, SecurityScopes    #type:ignore
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer, SecurityScopes
 from typing import Annotated
 from pydantic import BaseModel
 
 from ..database import db_dependency
 from app.config import ALGORITHM, SECRET_KEY
-import models
+from .. import models
 
 router= APIRouter(
     prefix= '/auth',    
@@ -80,13 +80,14 @@ async def get_current_user(security_scopes: SecurityScopes,
     except JWTError:
         raise credentials_exception
 
-    for scope in security_scopes.scopes:
-        if scope not in token_scopes:
-            raise HTTPException(
-                status_code= status.HTTP_403_FORBIDDEN,
-                detail= "Not enough permissions",
-                headers= {"WWW-Authenticate": authenticate_value}
-            )
+    if security_scopes.scopes:
+        for scope in security_scopes.scopes:
+            if scope not in token_scopes:
+                raise HTTPException(
+                    status_code= status.HTTP_403_FORBIDDEN,
+                    detail= "Not enough permissions",
+                    headers= {"WWW-Authenticate": authenticate_value}
+                )
     return {"id": user_id, "username": username, "scopes": token_scopes}
 
 customer_perm= Annotated[dict, Security(get_current_user, scopes=["customer"])]

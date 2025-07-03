@@ -3,7 +3,7 @@ import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 from fastapi import FastAPI
-from .internal import admin
+from .internal import admin, invoicedoc
 from .routers import customer, product, auth, invoices
 from app.database import engine, Base
 

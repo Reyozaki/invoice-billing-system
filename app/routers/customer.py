@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, status, Query
 
 from ..database import db_dependency
 from ..schemas import UpdateCustomer, CustomerProfile, CustomerIn
-from models import Customers, Users
+from ..models import Customers, Users
 from .auth import bcrypt_context, customer_perm, admin_perm
 
 router= APIRouter(
@@ -14,6 +14,8 @@ router= APIRouter(
 
 @router.get("/", response_model= CustomerProfile)
 async def view_profile(customer: customer_perm, db: db_dependency):
+    customer_s= customer
+    print(customer_s)
     customer_profile= db.query(Customers).filter(Customers.user_id == customer["id"]).first()
     return customer_profile
 

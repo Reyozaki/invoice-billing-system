@@ -6,7 +6,7 @@ from pydantic import BaseModel  #type: ignore
 
 from ..database import db_dependency
 from ..schemas import UpdateCustomer, Admin, Products, UpdateProduct
-import models
+from .. import models
 from ..routers.auth import bcrypt_context, admin_perm
 
 router= APIRouter(
@@ -45,6 +45,9 @@ async def add_admin(admin: Admin, db: db_dependency):
     db.commit()
     return {"message": "New Admin successfully created."}
 
+@router.get("/view-customers")
+async def view_customers(admin: admin_perm, db: db_dependency):
+    return db.query(models.Customers).all()
 
 @router.delete("/delete-customer")
 async def delete_customer(admin: admin_perm, db: db_dependency, 
@@ -71,7 +74,6 @@ async def add_product(admin: admin_perm, product: Products, db: db_dependency):
         tax_percent= product.tax_percent,
         description= product.description
     )
-    print(new_product)
     db.add(new_product)
     db.commit()
     return {"message": f"New product added: {product.name}."}
