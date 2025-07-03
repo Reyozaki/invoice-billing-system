@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException, Query, status, Depends
 from ..database import db_dependency
-from ..schemas import UpdateProduct
+from ..schemas import UpdateProduct, OrderIn
 from ..models import Orders, Products, Customers
 from .auth import admin_perm, customer_perm
 
@@ -16,32 +16,33 @@ async def view_products(db: db_dependency):
     return db.query(Products).all()
 
 @router.post("/buy")
-async def purchase(db: db_dependency, customer: customer_perm,
+async def purchase(order: OrderIn, db: db_dependency, customer: customer_perm,
                    product_name: str= Query(...)):
     existing_product = db.query(Products).filter(Products.name == product_name).first()
     if not existing_product:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail="Product not found.")
+                            detail= "Product not found.")
     
-    customer_id = db.query(Customers.customer_id).filter(Customers.email == customer.username).first()
+    customer_id = db.query(Customers.customer_id).filter(Customers.email == customer["username"]).scalar()
     if not customer_id:
         raise HTTPException(status_code= status.HTTP_400_BAD_REQUEST, 
-                            detail="Customer ID missing.")
+                            detail= "Please Login as a Customer.")
 
-    new_sale = Orders(
-        customer_id=customer_id,
-        product_id=existing_product.product_id
+    new_order = Orders(
+        customer_id= customer_id,
+        product_id= existing_product.product_id,
+        quantity= order.quantity,
+        status= order.status
     )
     try:
-        db.add(new_sale)
+        db.add(new_order)
         db.commit()
-        db.refresh(new_sale)
     except Exception as e:
         db.rollback()
         raise HTTPException(status_code= status.HTTP_500_INTERNAL_SERVER_ERROR, 
-                            detail=f"DB Error: {str(e)}")
+                            detail= f"DB Error: {str(e)}")
 
-    return {"message": f"Product '{product_name}' purchased.", "sale_id": new_sale.sale_id}
+    return {"message": f"Product '{product_name}' purchased.", "Order_id": new_order.order_id}
 
 
 @router.put("/edit-product")

@@ -27,6 +27,10 @@ class Orders(BaseModel):
     quantity: int
     status: Literal["unpaid", "paid"]
 
+class OrderIn(BaseModel):
+    quantity: int
+    status: Literal["unpaid", "paid"]
+
 class UpdateCustomer(BaseModel):
     company_name: Optional[str]= None
     email: Optional[EmailStr]= None
@@ -83,12 +87,26 @@ class CustomerIn(BaseModel):
         
 class InvoiceIn(BaseModel):
     customer_id: int
-    product_ids: List[int]
     status: Literal["Draft", "Sent", "Paid"]
     tax: Decimal
     discount: Decimal
     class Config:
         from_attributes= True
+        json_encoders = {
+            datetime: lambda v: v.strftime("%Y-%m-%d %H:%M")
+        }
+        
+class InvoiceOut(BaseModel):
+    invoice_id: int
+    customer_id: int
+    product_ids: List[int]
+    status: str
+    tax: Decimal
+    discount: Decimal
+    date: datetime
+
+    class Config:
+        from_attributes = True
         json_encoders = {
             datetime: lambda v: v.strftime("%Y-%m-%d %H:%M")
         }

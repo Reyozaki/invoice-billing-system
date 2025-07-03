@@ -1,11 +1,13 @@
 from fastapi import APIRouter, HTTPException, status
+from sqlalchemy.exc import SQLAlchemyError
+import os
+import subprocess
+
 from ..database import db_dependency
-from ..schemas import InvoiceIn, UpdateInvoice
+from ..schemas import InvoiceIn, UpdateInvoice, InvoiceOut
 from ..models import Customers, Invoices, Orders, Products
 from .auth import admin_perm, either_perm
 from ..internal import invoicedoc
-from typing import List
-
 
 router=APIRouter(    
     prefix= '/invoices',
@@ -22,8 +24,14 @@ async def view_invoices(db: db_dependency, user: either_perm):
         return invoices
 
     elif "customer" in perm:
-        customer= db.query(Customers).filter(Customers.user_id == user["id"]).first()        
-        customer_invoices = db.query(Invoices).filter(Invoices.customer_id == customer.customer_id).all()
+        customer= db.query(Customers).filter(Customers.user_id == user["id"]).first() 
+        
+        customer_invoices = (
+            db.query(Invoices)
+            .filter(Invoices.customer_id == customer.customer_id)
+            .filter(Invoices.status != "Draft")
+            .all()
+        )
 
         if not customer_invoices:
             raise HTTPException(status_code= status.HTTP_404_NOT_FOUND,
@@ -32,38 +40,37 @@ async def view_invoices(db: db_dependency, user: either_perm):
         return customer_invoices
     
 
-@router.post("/", status_code= status.HTTP_201_CREATED)
+@router.post("/", status_code= status.HTTP_201_CREATED, response_model= InvoiceOut)
 async def add_invoice(invoice: InvoiceIn, db: db_dependency, admin: admin_perm):
-    new_invoice = Invoices(
-        customer_id= invoice.customer_id,
-        status= invoice.status,
-        tax= invoice.tax,
-        discount= invoice.discount
-    )
-    db.add(new_invoice)
-    db.commit()
-    db.refresh(new_invoice)
     try:
-        for product_id in invoice.product_ids:
-            new_order = Orders(
-                customer_id= invoice.customer_id,
-                product_id= product_id,
-                invoice_id= new_invoice.invoice_id  
-            )
-            db.add(new_order)
+        unpaid_product_ids= (
+            db.query(Orders.product_id)
+            .filter(Orders.customer_id == invoice.customer_id)
+            .filter(Orders.status == "unpaid")
+            .distinct()
+            .all()
+        )
+        product_ids= [pid[0] for pid in unpaid_product_ids]
+
+        new_invoice= Invoices(
+            customer_id= invoice.customer_id,
+            status= invoice.status,
+            tax= invoice.tax,
+            discount= invoice.discount,
+            product_ids= product_ids
+        )
+        db.add(new_invoice)
         db.commit()
-    except Exception as e:
+        db.refresh(new_invoice)
+
+        return new_invoice
+
+    except SQLAlchemyError as e:
         db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error when adding orders: {e}"
-        )
-
-    return {
-        "message": "New invoice successfully created.",
-        "invoice_id": new_invoice.invoice_id,
-        "Purchases": invoice.product_ids
-    }
+            detail=f"Database error: {str(e)}"
+        )    
 
 @router.put("/invoice/{invoice_id}")
 async def update_invoice(invoice_id: int, invoice: UpdateInvoice, db: db_dependency):
@@ -97,25 +104,67 @@ async def delete_invoice(invoice_id: int, db: db_dependency):
     return {"message": "Invoice deleted successfully."}
 
 
-@router.get("/invoice/{invoice_id}/download")
+@router.get("/{invoice_id}/download")
 async def download_invoice(invoice_id: int, db: db_dependency, admin: admin_perm):
     invoice = db.query(Invoices).filter(Invoices.invoice_id == invoice_id).first()
     if not invoice:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
                             detail= "Invoice not found")
 
-    orders = db.query(Orders).filter(Orders.invoice_id == invoice_id).all()
-    if not orders:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
-                            detail= "No orders found for invoice")
-
     customer = db.query(Customers).filter(Customers.customer_id == invoice.customer_id).first()
     if not customer:
         raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
-                            detail="Customer not found")
+                            detail= "Customer not found")
 
-    product_ids = [order.product_id for order in orders]
-    product_objs = db.query(Products).filter(Products.product_id.in_(product_ids)).all()
-    products = {p.product_id: p for p in product_objs}
+    product_ids = invoice.product_ids
+    if not product_ids:
+        raise HTTPException(status_code= status.HTTP_404_NOT_FOUND, 
+                            detail= "No product IDs in invoice")
 
-    return invoicedoc.generate_invoice(invoice, customer, orders, products)
+    orders = (
+        db.query(Orders)
+        .filter(Orders.customer_id == invoice.customer_id)
+        .filter(Orders.product_id.in_(product_ids))
+        .filter(Orders.status == "unpaid")
+        .all()
+    )
+    if not orders:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail= "No matching orders found")
+
+    products = (
+        db.query(Products)
+        .filter(Products.product_id.in_(product_ids))
+        .all()
+    )
+    if not products:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, 
+                            detail= "Products not found")
+
+    product_obj = {p.product_id: p for p in products}
+
+    doc= invoicedoc.generate_invoice(invoice, customer, orders, product_obj)
+    
+    docx_dir = os.path.join(os.getcwd(), "invoices")
+    os.makedirs(docx_dir, exist_ok=True)
+
+    docx_filename = f"invoice_{invoice.invoice_id}.docx"
+    docx_path = os.path.join(docx_dir, docx_filename)
+    doc.save(docx_path)
+
+    pdf_filename = docx_filename.replace(".docx", ".pdf")
+    pdf_path = os.path.join(docx_dir, pdf_filename)
+
+    try:
+        subprocess.run([
+            "soffice", "--headless", "--convert-to", "pdf", docx_path,
+            "--outdir", docx_dir
+        ], check=True)
+    except subprocess.CalledProcessError as e:
+        raise HTTPException(status_code= status.HTTP_500_INTERNAL_SERVER_ERROR, 
+                            detail=f"PDF conversion failed: {e}")
+
+    return {
+        "docx_download_url": f"http://localhost:8000/downloads/{docx_filename}",
+        "pdf_download_url": f"http://localhost:8000/downloads/{pdf_filename}"
+    }

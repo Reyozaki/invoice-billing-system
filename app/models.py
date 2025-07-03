@@ -1,14 +1,13 @@
-from sqlalchemy import Column, ForeignKey, DateTime, String, Integer, func, BigInteger, Numeric
-from sqlalchemy.orm import relationship
+from sqlalchemy import Column, ForeignKey, DateTime, String, Integer, func, BigInteger, Numeric, JSON
 from app.database import Base
 
 class Users(Base):
     __tablename__ = "users"
     
-    user_id = Column(Integer, primary_key= True)
-    username = Column(String, unique= True, nullable= False)
-    password = Column(String, nullable= False)
-    role = Column(String, nullable= False)
+    user_id= Column(Integer, primary_key= True)
+    username= Column(String, unique= True, nullable= False)
+    password= Column(String, nullable= False)
+    role= Column(String, nullable= False)
     
 class Admin(Base):
     __tablename__="admin"
@@ -52,10 +51,11 @@ class Orders(Base):
 class Invoices(Base):
     __tablename__ = "invoices"
     
-    invoice_id = Column(BigInteger, primary_key= True)
-    customer_id = Column(Integer, ForeignKey("customers.customer_id"), nullable= False)
-    date = Column(DateTime(timezone= True), server_default=func.now())
-    status = Column(String(20), default= "Draft")
-    tax = Column(Numeric(5, 2), nullable= True)
-    discount = Column(Numeric(5, 2), nullable= True)
+    invoice_id= Column(BigInteger, primary_key= True)
+    customer_id= Column(Integer, ForeignKey("customers.customer_id"), nullable= False)
+    product_ids= Column(JSON)
+    date= Column(DateTime(timezone= True), server_default=func.now())
+    status= Column(String(20), default= "Draft")
+    tax= Column(Numeric(5, 2), nullable= True)
+    discount= Column(Numeric(5, 2), nullable= True)
     
