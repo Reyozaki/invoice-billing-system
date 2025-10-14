@@ -1,0 +1,16 @@
+# Setup after virtual environment creation
+fastapi[standard]
+uvicorn[standard]
+pydantic==2.11.7
+SQLAlchemy
+alembic
+psycopg2
+python-jose[cryptography]
+passlib[bcrypt]
+python-dotenv
+python-docx
+ruff
+pre-commit
+types-SQLAlchemy
+types-pyyaml
+aiosmtplib

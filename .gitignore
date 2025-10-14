@@ -1,0 +1,11 @@
+# environment variables
+.env
+.env.*
+
+# python cache files
+__pycache__
+*/__pycache__/*
+
+# misc files
+invoice/*
+notes.md
