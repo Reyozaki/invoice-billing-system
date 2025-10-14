@@ -38,6 +38,13 @@ command -v uvicorn >/dev/null 2>&1 || error "Uvicorn not found. Install it with:
 info "Starting Docker containers..."
 docker-compose -f "$COMPOSE_FILE" up -d --remove-orphans
 
+# --- 🧹 Ensure cleanup on exit ---
+cleanup() {
+  info "Stopping Docker containers..."
+  docker-compose -f "$COMPOSE_FILE" down
+}
+trap cleanup EXIT
+
 # --- 🐘 Detect PostgreSQL container ---
 DB_CONTAINER_NAME=$(docker-compose -f "$COMPOSE_FILE" ps -q postgres | xargs -r docker inspect --format '{{.Name}}' | sed 's#^/##')
 DB_USER=${POSTGRES_USER:-postgres}
@@ -49,21 +56,17 @@ info "Detected PostgreSQL container: $DB_CONTAINER_NAME"
 
 # --- ⏳ Wait for PostgreSQL readiness ---
 info "Waiting for PostgreSQL to be ready..."
-
-# Use Docker healthcheck if defined
 if docker inspect "$DB_CONTAINER_NAME" --format '{{.State.Health}}' >/dev/null 2>&1; then
   until [ "$(docker inspect -f '{{.State.Health.Status}}' "$DB_CONTAINER_NAME")" == "healthy" ]; do
     echo "⏳ Waiting for PostgreSQL health check..."
     sleep 2
   done
 else
-  # Fallback to pg_isready if no healthcheck is defined
   until docker exec "$DB_CONTAINER_NAME" pg_isready -U "$DB_USER" >/dev/null 2>&1; do
     echo "⏳ Waiting for database to accept connections..."
     sleep 2
   done
 fi
-
 success "PostgreSQL is ready! 🎉"
 
 # --- 🌐 Start FastAPI Server ---

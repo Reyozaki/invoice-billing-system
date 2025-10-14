@@ -12,18 +12,20 @@ git clone git@github.com:Reyozaki/invoice-biling-system.git
 - **uv package manager**
 
 ### Setup Environment
+Edit the .env files with your values.
+```
+# copy .env.example from root and docker directories and name them .env
+cp .env.example .env docker/.env.example docker/.env
+```
+
 ```
 # install dependencies for development
 uv sync --dev
 
 # install dependencies for deployment or production
 uv sync
-```
 
-Edit the .env files with your values.
-```
-# copy .env.example from root and docker directories and name them .env
-cp .env.example .env docker/.env.example docker/.env
+# activate virtual environment ".venv"
 ```
 
 ### Start the server (bash terminal)
