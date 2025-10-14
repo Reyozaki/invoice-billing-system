@@ -1,6 +1,7 @@
 # environment variables
 .env
-.env.*
+*/.env.*
+!*/.env.example
 
 # python cache files
 __pycache__
